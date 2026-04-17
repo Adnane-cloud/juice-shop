@@ -11,9 +11,11 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                echo 'Installation des dépendances pour le scan...'
-                // On utilise un conteneur Node pour faire le npm install sans l'installer sur AWS
-                sh 'docker run --rm -v ${WORKSPACE}:/app -w /app node:20-bookworm npm install --package-lock-only'
+                echo 'Génération des métadonnées pour Snyk...'
+                /* --package-lock-only : Ne télécharge pas les fichiers, crée juste le plan.
+                   --ignore-scripts    : Empêche de lancer "ng build" qui fait planter le stage.
+                */
+                sh 'docker run --rm -v ${WORKSPACE}:/app -w /app node:22-bookworm npm install --package-lock-only --ignore-scripts'
             }
         }
 
@@ -23,10 +25,7 @@ pipeline {
             }
             steps {
                 echo 'Analyse statique avec Snyk...'
-                /* CORRECTIONS :
-                   1. Utilisation de guillemets simples ' ' pour la sécurité ($SNYK_TOKEN au lieu de ${SNYK_TOKEN})
-                   2. Ajout de --package-lock-only pour que Snyk puisse analyser sans tout télécharger
-                */
+                // On utilise les guillemets simples ' ' pour masquer le secret dans les logs
                 sh 'docker run --rm -e SNYK_TOKEN=$SNYK_TOKEN -v ${WORKSPACE}:/app -w /app snyk/snyk:node snyk test --package-lock-only || true'
             }
         }

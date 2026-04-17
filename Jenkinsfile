@@ -40,18 +40,23 @@ pipeline {
             }
         }
 
-        stage('Deploy') {
+        stage('K8s Security Scan (Trivy)') {
             steps {
-                echo 'Déploiement en cours sur le port 8001...'
-                /* 1. On arrête et supprime l'ancien conteneur s'il existe pour éviter les conflits */
-                sh 'docker stop juice-shop-app || true'
-                sh 'docker rm juice-shop-app || true'
+                echo 'Analyse de la configuration Kubernetes...'
+                // Trivy peut scanner les fichiers YAML pour trouver des erreurs de sécurité
+                sh 'docker run --rm -v ${WORKSPACE}:/app -w /app aquasec/trivy config .'
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                echo 'Déploiement sur le cluster K3s...'
+                /* On applique la configuration YAML. 
+                   Kubernetes se charge de tout : arrêt de l'ancien pod, lancement du nouveau.
+                */
+                sh 'kubectl apply -f k8s/juice-shop.yaml'
                 
-                /* 2. On lance le nouveau conteneur en arrière-plan (-d)
-                   Le port interne de Juice Shop est 3000, on l'expose sur le 8001 */
-                sh 'docker run -d --name juice-shop-app -p 8001:3000 juice-shop-local'
-                
-                echo 'Déploiement réussi ! L application est en ligne.'
+                echo 'Application disponible sur le port 30001'
             }
         }
     }

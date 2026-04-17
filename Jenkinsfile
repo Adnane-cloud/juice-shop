@@ -4,48 +4,45 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                echo 'Récupération du code depuis GitHub...'
+                echo 'Récupération du code...'
                 checkout scm
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                echo 'Installation des dépendances pour le scan...'
+                // On utilise un conteneur Node pour faire le npm install sans l'installer sur AWS
+                sh 'docker run --rm -v ${WORKSPACE}:/app -w /app node:20-bookworm npm install --package-lock-only'
             }
         }
 
         stage('SAST Scan (Snyk)') {
             environment {
-                // Utilisation du token stocké dans les credentials Jenkins
                 SNYK_TOKEN = credentials('snyk-token')
             }
             steps {
-                echo 'Analyse statique du code source avec Snyk...'
-                /* CORRECTION : 
-                   -w /app : Définit le dossier de travail pour que Snyk trouve le code.
-                   || true : Empêche le build d'échouer à cause des nombreuses failles de Juice Shop.
+                echo 'Analyse statique avec Snyk...'
+                /* CORRECTIONS :
+                   1. Utilisation de guillemets simples ' ' pour la sécurité ($SNYK_TOKEN au lieu de ${SNYK_TOKEN})
+                   2. Ajout de --package-lock-only pour que Snyk puisse analyser sans tout télécharger
                 */
-                sh "docker run --rm -e SNYK_TOKEN=${SNYK_TOKEN} -v ${WORKSPACE}:/app -w /app snyk/snyk:node snyk test || true"
+                sh 'docker run --rm -e SNYK_TOKEN=$SNYK_TOKEN -v ${WORKSPACE}:/app -w /app snyk/snyk:node snyk test --package-lock-only || true'
             }
         }
 
         stage('Build Image') {
             steps {
-                echo 'Construction de l image Docker Juice Shop...'
-                // Construction de l'image locale
+                echo 'Construction de l image Docker...'
                 sh 'docker build -t juice-shop-local .'
             }
         }
 
         stage('Security Scan (Trivy)') {
             steps {
-                echo 'Analyse des vulnérabilités de l image finale avec Trivy...'
-                /* Trivy scanne l'image Docker pour trouver des vulnérabilités (CVE) 
-                   dans l'OS et les packages installés.
-                */
+                echo 'Analyse Trivy...'
                 sh 'docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image juice-shop-local'
             }
-        }
-    }
-
-    post {
-        always {
-            echo 'Nettoyage facultatif ou notifications ici.'
         }
     }
 }

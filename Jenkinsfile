@@ -51,10 +51,14 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 echo 'Déploiement sur le cluster K3s...'
-                /* On applique la configuration YAML. 
-                   Kubernetes se charge de tout : arrêt de l'ancien pod, lancement du nouveau.
-                */
+                // 1. On crée le pont automatiquement dans le pipeline
+                sh 'sudo docker save juice-shop-local:latest | sudo k3s ctr images import -'
+                
+                // 2. On applique le déploiement
                 sh 'kubectl apply -f k8s/juice-shop.yaml'
+                
+                // 3. On force le redémarrage pour être sûr qu'il prenne la nouvelle image
+                sh 'kubectl rollout restart deployment juice-shop'
                 
                 echo 'Application disponible sur le port 30001'
             }

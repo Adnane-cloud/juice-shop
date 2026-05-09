@@ -43,7 +43,6 @@ pipeline {
         stage('K8s Security Scan (Trivy)') {
             steps {
                 echo 'Analyse de la configuration Kubernetes...'
-                // Trivy peut scanner les fichiers YAML pour trouver des erreurs de sécurité
                 sh 'docker run --rm -v ${WORKSPACE}:/app -w /app aquasec/trivy config .'
             }
         }

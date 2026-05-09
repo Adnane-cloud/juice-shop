@@ -54,9 +54,9 @@ pipeline {
                 
                 sh 'sudo docker save juice-shop-local:latest | sudo k3s ctr images import -'
                 
-                sh 'kubectl apply -f k8s/juice-shop.yaml'
+                sh 'sudo kubectl apply -f k8s/juice-shop.yaml'
                 
-                sh 'kubectl rollout restart deployment juice-shop'
+                sh 'sudo kubectl rollout restart deployment juice-shop'
                 
                 echo 'Application disponible sur le port 30001'
             }

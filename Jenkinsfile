@@ -57,7 +57,7 @@ pipeline {
                 
                 sh 'sudo kubectl rollout restart deployment juice-shop'
                 
-                echo 'Application disponible sur le port 30001'
+                echo 'Application disponible sur le port 30001....'
             }
         }
     }
